@@ -1,9 +1,8 @@
 """
 Booking.com scraper using Playwright headless browser.
 
-Bypasses Cloudflare JS challenge by running real Chromium.
-Extracts property data from rendered DOM and intercepted GraphQL/API
-responses.
+Infinite-scrolls each page and paginates through all result pages to
+capture the full inventory for a region.
 """
 
 from __future__ import annotations
@@ -18,11 +17,14 @@ from playwright.async_api import Page, Response, async_playwright
 
 from core.logging import logger
 from infrastructure.scraping.browser import create_stealth_browser
-from infrastructure.scraping.models import ScrapedListing
+from infrastructure.scraping.models import ScrapedListing, classify_property_type
+
+# Safety cap on pages
+MAX_PAGES = 20
 
 
 class BookingScraper:
-    """Scrapes Booking.com vacation-rental listings using Playwright."""
+    """Scrapes Booking.com listings with infinite-scroll + page pagination."""
 
     def __init__(self, center_lat: float, center_lng: float, radius_km: float):
         self.center_lat = center_lat
@@ -39,17 +41,28 @@ class BookingScraper:
             self.center_lat, self.center_lng, self.radius_km,
         )
 
-        api_payloads: list[dict] = []
-        listings: list[ScrapedListing] = []
+        all_listings: list[ScrapedListing] = []
+        seen_ids: set[str] = set()
 
         checkin = (date.today() + timedelta(days=14)).isoformat()
         checkout = (date.today() + timedelta(days=16)).isoformat()
+
+        base_url = (
+            "https://www.booking.com/searchresults.html"
+            f"?ss=Berchtesgaden%2C+Germany"
+            f"&dest_type=city"
+            f"&checkin={checkin}&checkout={checkout}"
+            "&group_adults=2&no_rooms=1&group_children=0"
+            "&selected_currency=EUR"
+        )
 
         async with async_playwright() as pw:
             browser, ctx = await create_stealth_browser(pw)
             page = await ctx.new_page()
 
             # ---- intercept API responses --------------------------------
+            api_payloads: list[dict] = []
+
             async def _on_response(resp: Response) -> None:
                 url = resp.url
                 if any(k in url for k in ("graphql", "sr_ajax", "SearchResultsQuery")):
@@ -60,74 +73,111 @@ class BookingScraper:
 
             page.on("response", _on_response)
 
-            # ---- navigate -----------------------------------------------
-            search_url = (
-                "https://www.booking.com/searchresults.html"
-                f"?ss=Berchtesgaden%2C+Germany"
-                f"&dest_type=city"
-                f"&checkin={checkin}&checkout={checkout}"
-                "&group_adults=2&no_rooms=1&group_children=0"
-                "&selected_currency=EUR"
-            )
-            try:
-                await page.goto(search_url, wait_until="domcontentloaded", timeout=60_000)
-            except Exception as exc:
-                logger.warning("Booking page.goto timeout: %s", exc)
+            for page_num in range(MAX_PAGES):
+                offset = page_num * 25
+                url = f"{base_url}&offset={offset}" if offset else base_url
 
-            # Booking.com uses a Cloudflare JS challenge that auto-redirects.
-            # Wait for the page to fully settle after the challenge resolves.
-            try:
-                await page.wait_for_load_state("networkidle", timeout=30_000)
-            except Exception:
-                pass
-            await asyncio.sleep(random.uniform(3, 6))
+                try:
+                    await page.goto(url, wait_until="domcontentloaded", timeout=60_000)
+                except Exception as exc:
+                    logger.warning("Booking page.goto timeout (page %d): %s", page_num + 1, exc)
+                    break
 
-            # dismiss cookie banner (OneTrust)
-            await self._dismiss_cookie(page)
+                # Cloudflare challenge resolve
+                try:
+                    await page.wait_for_load_state("networkidle", timeout=30_000)
+                except Exception:
+                    pass
+                await asyncio.sleep(random.uniform(3, 6))
 
-            # wait for property cards – allow extra time after challenge
-            try:
-                await page.wait_for_selector(
-                    '[data-testid="property-card"]',
-                    timeout=30_000,
+                if page_num == 0:
+                    await self._dismiss_cookie(page)
+
+                # wait for property cards
+                try:
+                    await page.wait_for_selector(
+                        '[data-testid="property-card"]',
+                        timeout=20_000,
+                    )
+                except Exception:
+                    logger.info("Booking page %d: no property cards found – stopping", page_num + 1)
+                    break
+
+                # infinite scroll within the page until no new cards appear
+                await self._scroll_until_stable(page)
+
+                # extract from this page
+                api_payloads_copy = list(api_payloads)
+                api_payloads.clear()
+
+                page_listings = await self._extract_dom(page)
+                if not page_listings:
+                    for payload in api_payloads_copy:
+                        page_listings.extend(self._parse_api(payload))
+                if not page_listings:
+                    html = await page.content()
+                    page_listings = self._parse_embedded_json(html)
+
+                new_count = 0
+                for li in page_listings:
+                    if li.external_id not in seen_ids:
+                        seen_ids.add(li.external_id)
+                        all_listings.append(li)
+                        new_count += 1
+
+                logger.info(
+                    "Booking page %d (offset=%d): %d cards, %d new",
+                    page_num + 1, offset, len(page_listings), new_count,
                 )
-            except Exception:
-                logger.warning("Booking: property cards not found – trying fallback")
 
-            # human-like scrolling
-            for _ in range(5):
-                await page.evaluate("window.scrollBy(0, %d)" % random.randint(500, 900))
-                await asyncio.sleep(random.uniform(0.8, 2.0))
+                # If no new listings found, we've exhausted all results
+                if new_count == 0:
+                    break
 
-            # ---- Method 1: DOM cards ------------------------------------
-            listings = await self._extract_dom(page)
-
-            # ---- Method 2: intercepted API data -------------------------
-            if not listings:
-                for payload in api_payloads:
-                    listings.extend(self._parse_api(payload))
-
-            # ---- Method 3: embedded JSON in page source -----------------
-            if not listings:
-                html = await page.content()
-                listings = self._parse_embedded_json(html)
+                # human-like delay between pages
+                await asyncio.sleep(random.uniform(3, 6))
 
             await browser.close()
 
-        # deduplicate
-        seen: set[str] = set()
-        unique = []
-        for li in listings:
-            if li.external_id not in seen:
-                seen.add(li.external_id)
-                unique.append(li)
-
-        logger.info("Booking.com: %d unique listings scraped", len(unique))
-        return unique
+        logger.info("Booking.com: %d unique listings total", len(all_listings))
+        return all_listings
 
     async def scrape_prices(self, listing_ids: list[str]) -> list[dict]:
-        """Price scraping – placeholder, prices come from search results."""
         return []
+
+    # ------------------------------------------------------------------
+    # Scroll helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    async def _scroll_until_stable(page: Page, max_scrolls: int = 20) -> None:
+        """Keep scrolling until no new property cards appear."""
+        prev_count = 0
+        stable_rounds = 0
+        for _ in range(max_scrolls):
+            await page.evaluate(
+                "window.scrollBy(0, %d)" % random.randint(600, 1000)
+            )
+            await asyncio.sleep(random.uniform(1.0, 2.5))
+
+            # Click "Load more results" button if present
+            try:
+                btn = page.locator('button:has-text("Load more results"), button:has-text("Mehr Ergebnisse")')
+                if await btn.first.is_visible(timeout=1_000):
+                    await btn.first.click()
+                    await asyncio.sleep(random.uniform(2, 4))
+            except Exception:
+                pass
+
+            cards = await page.query_selector_all('[data-testid="property-card"]')
+            current_count = len(cards)
+            if current_count == prev_count:
+                stable_rounds += 1
+                if stable_rounds >= 3:
+                    break
+            else:
+                stable_rounds = 0
+            prev_count = current_count
 
     # ------------------------------------------------------------------
     # Cookie banner
@@ -218,6 +268,9 @@ class BookingScraper:
                     ScrapedListing(
                         external_id=f"booking_{hotel_id}",
                         platform="booking",
+                        property_type=classify_property_type(
+                            title.strip(), platform_hint="booking"
+                        ),
                         title=title.strip(),
                         location="Berchtesgaden",
                         lat=self.center_lat,
@@ -345,6 +398,7 @@ class BookingScraper:
             return ScrapedListing(
                 external_id=f"booking_{hid}",
                 platform="booking",
+                property_type=classify_property_type(name, platform_hint="booking"),
                 title=name,
                 location="Berchtesgaden",
                 lat=lat,
@@ -391,6 +445,7 @@ class BookingScraper:
             ScrapedListing(
                 external_id=f"booking_{ext_id}",
                 platform="booking",
+                property_type=classify_property_type(name, platform_hint="booking"),
                 title=name,
                 location="Berchtesgaden",
                 lat=lat,

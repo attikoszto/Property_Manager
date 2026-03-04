@@ -22,6 +22,7 @@ class ListingModel(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     external_id = Column(String(255), unique=True, nullable=False, index=True)
     platform = Column(String(50), nullable=False)
+    property_type = Column(String(50), nullable=False, default="unknown", server_default="unknown")
     title = Column(Text, nullable=False)
     location = Column(String(255), nullable=False)
     lat = Column(Float, nullable=False)

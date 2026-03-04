@@ -47,6 +47,7 @@ async def scrape_listings() -> None:
                     listing = ListingModel(
                         external_id=item.external_id,
                         platform=item.platform,
+                        property_type=item.property_type,
                         title=item.title,
                         location=item.location,
                         lat=item.lat,

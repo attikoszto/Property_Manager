@@ -60,9 +60,9 @@ class ListingRepository:
         existing = await self.get_by_external_id(listing.external_id)
         if existing:
             for attr in [
-                "title", "location", "lat", "lng", "capacity", "bedrooms",
-                "bathrooms", "square_meters", "rating", "review_count",
-                "amenities", "base_price",
+                "title", "property_type", "location", "lat", "lng",
+                "capacity", "bedrooms", "bathrooms", "square_meters",
+                "rating", "review_count", "amenities", "base_price",
             ]:
                 setattr(existing, attr, getattr(listing, attr))
             # Only update ownership fields if explicitly set

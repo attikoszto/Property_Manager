@@ -1,9 +1,9 @@
 """
 Airbnb scraper using Playwright headless browser.
 
-Bypasses anti-bot challenges by running real Chromium. Captures listing data
-via network interception (StaysSearch API), __NEXT_DATA__ parsing, or DOM
-extraction as successive fallbacks.
+Paginates through all search result pages (~18 listings per page) to capture
+the full inventory for a region. Uses network interception, __NEXT_DATA__
+parsing, and DOM extraction as layered fallbacks.
 """
 
 from __future__ import annotations
@@ -17,11 +17,14 @@ from playwright.async_api import Page, Response, async_playwright
 
 from core.logging import logger
 from infrastructure.scraping.browser import create_stealth_browser
-from infrastructure.scraping.models import ScrapedListing
+from infrastructure.scraping.models import ScrapedListing, classify_property_type
+
+# Maximum pages to scrape (safety cap)
+MAX_PAGES = 35
 
 
 class AirbnbScraper:
-    """Scrapes Airbnb listings around a geographic centre using Playwright."""
+    """Scrapes Airbnb listings with full pagination."""
 
     def __init__(self, center_lat: float, center_lng: float, radius_km: float):
         self.center_lat = center_lat
@@ -38,14 +41,16 @@ class AirbnbScraper:
             self.center_lat, self.center_lng, self.radius_km,
         )
 
-        api_payloads: list[dict] = []
-        listings: list[ScrapedListing] = []
+        all_listings: list[ScrapedListing] = []
+        seen_ids: set[str] = set()
 
         async with async_playwright() as pw:
             browser, ctx = await create_stealth_browser(pw)
             page = await ctx.new_page()
 
-            # ---- intercept API responses --------------------------------
+            # ---- intercepted API payloads (accumulated across pages) ----
+            api_payloads: list[dict] = []
+
             async def _on_response(resp: Response) -> None:
                 url = resp.url
                 if any(k in url for k in ("StaysSearch", "ExploreSearch")):
@@ -56,7 +61,7 @@ class AirbnbScraper:
 
             page.on("response", _on_response)
 
-            # ---- navigate -----------------------------------------------
+            # ---- page 1 ------------------------------------------------
             search_url = (
                 "https://www.airbnb.com/s/Berchtesgaden--Germany/homes"
                 "?refinement_paths%5B%5D=%2Fhomes"
@@ -67,57 +72,127 @@ class AirbnbScraper:
             except Exception as exc:
                 logger.warning("Airbnb page.goto timeout: %s", exc)
 
-            # dismiss cookie overlay
             await self._dismiss_cookie(page)
-
-            # human-like wait for XHR
             await asyncio.sleep(random.uniform(4, 7))
 
-            # human-like scrolling
-            for _ in range(3):
-                await page.evaluate("window.scrollBy(0, %d)" % random.randint(500, 900))
-                await asyncio.sleep(random.uniform(0.8, 2.0))
+            # scroll full first page
+            await self._scroll_page(page)
 
-            # ---- Method 1: intercepted API data -------------------------
-            for payload in api_payloads:
-                listings.extend(self._parse_api_payload(payload))
+            # extract first page
+            page_listings = await self._extract_page(page, api_payloads)
+            for li in page_listings:
+                if li.external_id not in seen_ids:
+                    seen_ids.add(li.external_id)
+                    all_listings.append(li)
+            api_payloads.clear()
 
-            # ---- Method 2: __NEXT_DATA__ --------------------------------
-            if not listings:
-                try:
-                    nd = await page.evaluate(
-                        "(() => {"
-                        "  const el = document.getElementById('__NEXT_DATA__');"
-                        "  return el ? JSON.parse(el.textContent) : null;"
-                        "})()"
-                    )
-                    if nd:
-                        listings = self._parse_deep(nd)
-                except Exception as exc:
-                    logger.debug("__NEXT_DATA__ extraction failed: %s", exc)
+            logger.info("Airbnb page 1: %d listings", len(page_listings))
 
-            # ---- Method 3: DOM cards ------------------------------------
-            if not listings:
-                listings = await self._extract_dom(page)
+            # ---- paginate through remaining pages -----------------------
+            for page_num in range(2, MAX_PAGES + 1):
+                # Click "Next" button
+                next_clicked = await self._click_next(page)
+                if not next_clicked:
+                    logger.info("Airbnb: no more pages after page %d", page_num - 1)
+                    break
+
+                await asyncio.sleep(random.uniform(3, 6))
+                await self._scroll_page(page)
+
+                page_listings = await self._extract_page(page, api_payloads)
+                api_payloads.clear()
+
+                new_count = 0
+                for li in page_listings:
+                    if li.external_id not in seen_ids:
+                        seen_ids.add(li.external_id)
+                        all_listings.append(li)
+                        new_count += 1
+
+                logger.info(
+                    "Airbnb page %d: %d listings (%d new)",
+                    page_num, len(page_listings), new_count,
+                )
+
+                # Stop if we get no new listings (end of results)
+                if new_count == 0:
+                    break
+
+                # Human-like delay between pages
+                await asyncio.sleep(random.uniform(2, 5))
 
             await browser.close()
 
-        # deduplicate
-        seen: set[str] = set()
-        unique = []
-        for li in listings:
-            if li.external_id not in seen:
-                seen.add(li.external_id)
-                unique.append(li)
-
-        logger.info("Airbnb: %d unique listings scraped", len(unique))
-        return unique
+        logger.info("Airbnb: %d unique listings total", len(all_listings))
+        return all_listings
 
     async def scrape_prices(self, listing_ids: list[str]) -> list[dict]:
-        """Price scraping – placeholder, prices come from search results."""
         return []
 
     # ------------------------------------------------------------------
+    # Pagination helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    async def _click_next(page: Page) -> bool:
+        """Click the Next page button. Returns True if found and clicked."""
+        for sel in (
+            'a[aria-label="Next"]',
+            'nav[aria-label*="pagination"] a:last-child',
+            'a[aria-label="Weiter"]',
+        ):
+            try:
+                loc = page.locator(sel).first
+                if await loc.is_visible(timeout=3_000):
+                    await loc.click()
+                    await asyncio.sleep(2)
+                    try:
+                        await page.wait_for_load_state("networkidle", timeout=10_000)
+                    except Exception:
+                        pass
+                    return True
+            except Exception:
+                continue
+        return False
+
+    @staticmethod
+    async def _scroll_page(page: Page) -> None:
+        """Scroll down the page to trigger lazy-loading."""
+        for _ in range(4):
+            await page.evaluate(
+                "window.scrollBy(0, %d)" % random.randint(600, 1000)
+            )
+            await asyncio.sleep(random.uniform(0.6, 1.5))
+
+    async def _extract_page(
+        self, page: Page, api_payloads: list[dict]
+    ) -> list[ScrapedListing]:
+        """Extract listings from the current page using all methods."""
+        listings: list[ScrapedListing] = []
+
+        # Method 1: intercepted API data
+        for payload in api_payloads:
+            listings.extend(self._parse_api_payload(payload))
+
+        # Method 2: __NEXT_DATA__
+        if not listings:
+            try:
+                nd = await page.evaluate(
+                    "(() => {"
+                    "  const el = document.getElementById('__NEXT_DATA__');"
+                    "  return el ? JSON.parse(el.textContent) : null;"
+                    "})()"
+                )
+                if nd:
+                    listings = self._parse_deep(nd)
+            except Exception:
+                pass
+
+        # Method 3: DOM cards
+        if not listings:
+            listings = await self._extract_dom(page)
+
+        return listings
     # Cookie / consent helpers
     # ------------------------------------------------------------------
 
@@ -280,6 +355,9 @@ class AirbnbScraper:
                         ScrapedListing(
                             external_id=f"airbnb_{lid}",
                             platform="airbnb",
+                            property_type=classify_property_type(
+                                title or "", platform_hint="airbnb"
+                            ),
                             title=(title or f"Airbnb {lid}").strip(),
                             location="Berchtesgaden",
                             lat=self.center_lat,
@@ -349,6 +427,7 @@ class AirbnbScraper:
             return ScrapedListing(
                 external_id=f"airbnb_{lid}",
                 platform="airbnb",
+                property_type=classify_property_type(title, platform_hint="airbnb"),
                 title=title,
                 location="Berchtesgaden",
                 lat=lat,
