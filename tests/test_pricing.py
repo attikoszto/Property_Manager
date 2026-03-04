@@ -1,0 +1,51 @@
+from services.pricing_service import PricingService
+from unittest.mock import AsyncMock, MagicMock
+
+
+class TestPricingService:
+    def setup_method(self):
+        self.listing_repo = MagicMock()
+        self.competitor_repo = MagicMock()
+        self.service = PricingService(self.listing_repo, self.competitor_repo)
+
+    async def test_compute_quality_score(self):
+        listing = MagicMock()
+        listing.rating = 4.8
+        listing.review_count = 100
+        listing.amenities = ["wifi", "parking", "kitchen"]
+        listing.square_meters = 65.0
+        self.listing_repo.get_by_id = AsyncMock(return_value=listing)
+
+        score = await self.service.compute_quality_score(1)
+
+        assert score > 0
+        assert isinstance(score, float)
+
+    async def test_competition_adjustment_no_competitors(self):
+        listing = MagicMock()
+        listing.base_price = 100.0
+        self.listing_repo.get_by_id = AsyncMock(return_value=listing)
+        self.competitor_repo.get_latest_prices = AsyncMock(return_value=[])
+
+        adjustment = await self.service.compute_competition_adjustment(1, [])
+
+        assert adjustment == 1.0
+
+    async def test_calculate_price(self):
+        listing = MagicMock()
+        listing.base_price = 100.0
+        listing.rating = 4.5
+        listing.review_count = 50
+        listing.amenities = ["wifi", "parking"]
+        listing.square_meters = 50.0
+        self.listing_repo.get_by_id = AsyncMock(return_value=listing)
+        self.competitor_repo.get_latest_prices = AsyncMock(return_value=[90, 100, 110])
+
+        price = await self.service.calculate_price(
+            listing_id=1,
+            demand_index=1.2,
+            similar_listing_ids=[2, 3, 4],
+        )
+
+        assert price > 0
+        assert isinstance(price, float)

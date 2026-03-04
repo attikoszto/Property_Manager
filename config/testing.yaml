@@ -1,0 +1,21 @@
+app:
+  name: AI Property Manager Test
+  debug: true
+
+database:
+  url: postgresql+asyncpg://postgres:postgres@localhost:5432/property_manager_test
+  sync_url: postgresql://postgres:postgres@localhost:5432/property_manager_test
+
+redis:
+  url: redis://localhost:6379/1
+
+region:
+  center_lat: 47.6301
+  center_lng: 13.0044
+  radius_km: 5.0
+
+scraping:
+  interval_hours: 999
+
+training:
+  interval_hours: 999

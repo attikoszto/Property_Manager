@@ -1,0 +1,21 @@
+app:
+  name: AI Property Manager
+  debug: false
+
+database:
+  url: postgresql+asyncpg://postgres:${DB_PASSWORD}@db:5432/property_manager
+  sync_url: postgresql://postgres:${DB_PASSWORD}@db:5432/property_manager
+
+redis:
+  url: redis://redis:6379/0
+
+region:
+  center_lat: 47.6301
+  center_lng: 13.0044
+  radius_km: 5.0
+
+scraping:
+  interval_hours: 12
+
+training:
+  interval_hours: 24
