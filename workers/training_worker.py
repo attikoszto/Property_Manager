@@ -1,10 +1,10 @@
 from core.logging import logger
-from infrastructure.database.session import async_session
 from infrastructure.database.repository import ListingRepository
+from infrastructure.database.session import async_session
 from ml.feature_engineering.feature_builder import FeatureBuilder
-from ml.models.similarity_model import SimilarityModel
 from ml.models.demand_model import DemandModel
 from ml.models.price_model import PriceModel
+from ml.models.similarity_model import SimilarityModel
 
 
 class TrainingWorker:

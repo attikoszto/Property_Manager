@@ -8,16 +8,14 @@ Detects bookings by comparing availability changes between snapshots.
 import asyncio
 from datetime import date
 
-from core.constants import BERCHTESGADEN_LAT, BERCHTESGADEN_LNG, DEFAULT_RADIUS_KM
 from core.logging import logger
-from infrastructure.database.session import async_session, engine
-from infrastructure.database.models import Base
+from infrastructure.database.models import Base, MarketSnapshotModel
 from infrastructure.database.repository import (
-    ListingRepository,
     AvailabilityRepository,
+    ListingRepository,
     MarketSnapshotRepository,
 )
-from infrastructure.database.models import MarketSnapshotModel
+from infrastructure.database.session import async_session, engine
 
 
 async def scrape_availability() -> None:

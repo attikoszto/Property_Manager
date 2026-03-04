@@ -1,7 +1,8 @@
-import numpy as np
-from sklearn.ensemble import GradientBoostingRegressor
 import pickle
 from pathlib import Path
+
+import numpy as np
+from sklearn.ensemble import GradientBoostingRegressor
 
 
 class DemandModel:

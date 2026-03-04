@@ -5,11 +5,12 @@ Uses XGBoost or LightGBM with advanced demand features including weather forecas
 ski/outdoor indices, demand momentum, and market signals.
 """
 
-import numpy as np
-from xgboost import XGBClassifier
-from lightgbm import LGBMClassifier
 import pickle
 from pathlib import Path
+
+import numpy as np
+from lightgbm import LGBMClassifier
+from xgboost import XGBClassifier
 
 
 class BookingProbabilityModel:

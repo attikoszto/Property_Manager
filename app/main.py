@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from api.routes import listings, pricing, cleaners, demand, signals
+from api.routes import cleaners, demand, listings, pricing, signals
 from app.lifespan import lifespan
 
 app = FastAPI(

@@ -9,9 +9,9 @@ from datetime import date
 
 from core.constants import BERCHTESGADEN_LAT, BERCHTESGADEN_LNG, DEFAULT_RADIUS_KM
 from core.logging import logger
-from infrastructure.database.session import async_session, engine
 from infrastructure.database.models import Base, CompetitorPriceModel
-from infrastructure.database.repository import ListingRepository, CompetitorPriceRepository
+from infrastructure.database.repository import CompetitorPriceRepository, ListingRepository
+from infrastructure.database.session import async_session, engine
 from infrastructure.scraping.airbnb_scraper import AirbnbScraper
 from infrastructure.scraping.booking_scraper import BookingScraper
 

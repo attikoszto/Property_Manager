@@ -1,23 +1,23 @@
+from collections.abc import Sequence
 from datetime import date, timedelta
-from typing import Sequence
 
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from infrastructure.database.models import (
-    ListingModel,
-    CompetitorPriceModel,
-    WeatherModel,
-    EventModel,
+    AvailabilitySnapshotModel,
     BookingModel,
     CleanerModel,
-    PropertyCleanerModel,
     CleaningTaskModel,
-    AvailabilitySnapshotModel,
-    WeatherForecastModel,
-    SearchDemandModel,
+    CompetitorPriceModel,
+    EventModel,
     FlightPriceModel,
+    ListingModel,
     MarketSnapshotModel,
+    PropertyCleanerModel,
+    SearchDemandModel,
+    WeatherForecastModel,
+    WeatherModel,
 )
 
 

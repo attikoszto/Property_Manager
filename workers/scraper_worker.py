@@ -1,10 +1,10 @@
 from core.logging import logger
 from core.settings import settings
+from infrastructure.database.models import ListingModel
+from infrastructure.database.repository import CompetitorPriceRepository, ListingRepository
+from infrastructure.database.session import async_session
 from infrastructure.scraping.airbnb_scraper import AirbnbScraper
 from infrastructure.scraping.booking_scraper import BookingScraper
-from infrastructure.database.session import async_session
-from infrastructure.database.repository import ListingRepository, CompetitorPriceRepository
-from infrastructure.database.models import ListingModel, CompetitorPriceModel
 
 
 class ScraperWorker:

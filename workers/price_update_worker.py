@@ -1,11 +1,14 @@
 from core.logging import logger
-from core.settings import settings
+from infrastructure.database.repository import (
+    CompetitorPriceRepository,
+    EventRepository,
+    ListingRepository,
+    WeatherRepository,
+)
 from infrastructure.database.session import async_session
-from infrastructure.database.repository import ListingRepository, CompetitorPriceRepository
-from services.pricing_service import PricingService
 from services.demand_service import DemandService
+from services.pricing_service import PricingService
 from services.similarity_service import SimilarityService
-from infrastructure.database.repository import EventRepository, WeatherRepository
 
 
 class PriceUpdateWorker:

@@ -1,7 +1,8 @@
 """Tests for DemandFeatureBuilder.build_extended() method."""
 
-import numpy as np
 from datetime import date
+
+import numpy as np
 
 from ml.feature_engineering.demand_features import DemandFeatureBuilder
 from ml.models.booking_probability_model import BookingProbabilityModel

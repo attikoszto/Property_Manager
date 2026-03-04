@@ -1,6 +1,7 @@
 from datetime import date
-from services.pricing_service import PricingService
 from unittest.mock import AsyncMock, MagicMock
+
+from services.pricing_service import PricingService
 
 
 class TestPricingService:

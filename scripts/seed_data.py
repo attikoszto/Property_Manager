@@ -3,20 +3,16 @@ Seed the database with sample data for development and testing.
 """
 
 import asyncio
-from datetime import date, datetime
+from datetime import date
 
-from infrastructure.database.session import async_session, engine
+from core.logging import logger
 from infrastructure.database.models import (
     Base,
-    ListingModel,
-    CompetitorPriceModel,
-    WeatherModel,
-    EventModel,
     CleanerModel,
-    PropertyCleanerModel,
+    EventModel,
+    ListingModel,
 )
-from core.logging import logger
-
+from infrastructure.database.session import async_session, engine
 
 SAMPLE_LISTINGS = [
     {

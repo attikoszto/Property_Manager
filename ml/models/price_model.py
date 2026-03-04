@@ -1,7 +1,8 @@
-import numpy as np
-from xgboost import XGBRegressor
 import pickle
 from pathlib import Path
+
+import numpy as np
+from xgboost import XGBRegressor
 
 
 class PriceModel:

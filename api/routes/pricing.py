@@ -3,10 +3,15 @@ from datetime import date
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 
-from api.dependencies import get_pricing_service, get_demand_service, get_similarity_service, get_listing_repo
+from api.dependencies import (
+    get_demand_service,
+    get_listing_repo,
+    get_pricing_service,
+    get_similarity_service,
+)
 from infrastructure.database.repository import ListingRepository
-from services.pricing_service import PricingService
 from services.demand_service import DemandService
+from services.pricing_service import PricingService
 from services.similarity_service import SimilarityService
 
 router = APIRouter()

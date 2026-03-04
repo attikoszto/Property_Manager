@@ -8,9 +8,9 @@ import asyncio
 
 from core.constants import BERCHTESGADEN_LAT, BERCHTESGADEN_LNG
 from core.logging import logger
-from infrastructure.database.session import async_session, engine
 from infrastructure.database.models import Base, WeatherForecastModel
 from infrastructure.database.repository import WeatherForecastRepository
+from infrastructure.database.session import async_session, engine
 from infrastructure.weather.weather_client import WeatherClient
 
 

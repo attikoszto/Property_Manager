@@ -1,15 +1,15 @@
-from datetime import date, datetime
+from datetime import datetime
 
 from sqlalchemy import (
-    Column,
-    Integer,
-    String,
-    Float,
+    JSON,
     Boolean,
+    Column,
     Date,
     DateTime,
-    JSON,
+    Float,
     ForeignKey,
+    Integer,
+    String,
     Text,
 )
 

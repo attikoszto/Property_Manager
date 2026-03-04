@@ -59,6 +59,7 @@ class TestSimilarityServiceFiltering:
     def test_exclude_customers_flag(self):
         """Verify the repository is called with exclude_customers=True by default."""
         from unittest.mock import AsyncMock, MagicMock
+
         from services.similarity_service import SimilarityService
 
         listing_repo = MagicMock()

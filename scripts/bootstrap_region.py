@@ -6,6 +6,7 @@ and prepares for initial data collection within 5 km radius.
 """
 
 import asyncio
+
 from geopy.distance import geodesic
 
 from core.constants import BERCHTESGADEN_LAT, BERCHTESGADEN_LNG, DEFAULT_RADIUS_KM

@@ -1,7 +1,8 @@
+import pickle
+from pathlib import Path
+
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
-from pathlib import Path
-import pickle
 
 
 class SimilarityModel:

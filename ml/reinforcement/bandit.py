@@ -1,5 +1,6 @@
-import numpy as np
 from collections import defaultdict
+
+import numpy as np
 
 from core.constants import PRICE_MULTIPLIER_OPTIONS
 

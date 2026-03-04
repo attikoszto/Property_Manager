@@ -2,10 +2,10 @@ from datetime import date
 
 from core.constants import SEASONALITY_FACTORS, WEEKDAY_FACTORS
 from infrastructure.database.repository import (
+    AvailabilityRepository,
+    CompetitorPriceRepository,
     EventRepository,
     WeatherRepository,
-    CompetitorPriceRepository,
-    AvailabilityRepository,
 )
 
 

@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from infrastructure.database.repository import ListingRepository
-from infrastructure.database.models import ListingModel
 from api.dependencies import get_listing_repo
+from infrastructure.database.models import ListingModel
+from infrastructure.database.repository import ListingRepository
 
 router = APIRouter()
 

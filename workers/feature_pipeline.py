@@ -1,6 +1,6 @@
 from core.logging import logger
-from infrastructure.database.session import async_session
 from infrastructure.database.repository import ListingRepository
+from infrastructure.database.session import async_session
 from ml.feature_engineering.feature_builder import FeatureBuilder
 
 

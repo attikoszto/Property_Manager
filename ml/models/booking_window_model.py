@@ -5,10 +5,11 @@ Features: season, property_type, location, price, day_of_week, holiday_calendar.
 Output: expected_booking_lead_time (days).
 """
 
-import numpy as np
-from sklearn.ensemble import GradientBoostingRegressor
 import pickle
 from pathlib import Path
+
+import numpy as np
+from sklearn.ensemble import GradientBoostingRegressor
 
 
 class BookingWindowModel:

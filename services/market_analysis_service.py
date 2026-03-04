@@ -8,11 +8,11 @@ from dataclasses import dataclass
 from datetime import date
 
 from infrastructure.database.repository import (
-    MarketSnapshotRepository,
     AvailabilityRepository,
     CompetitorPriceRepository,
-    SearchDemandRepository,
     FlightPriceRepository,
+    MarketSnapshotRepository,
+    SearchDemandRepository,
 )
 
 

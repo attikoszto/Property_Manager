@@ -8,11 +8,11 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 
 from api.dependencies import (
-    get_weather_feature_service,
     get_market_analysis_service,
+    get_weather_feature_service,
 )
-from services.weather_feature_service import WeatherFeatureService
 from services.market_analysis_service import MarketAnalysisService
+from services.weather_feature_service import WeatherFeatureService
 
 router = APIRouter()
 
