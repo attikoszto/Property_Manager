@@ -3,8 +3,8 @@ app:
   debug: true
 
 database:
-  url: postgresql+asyncpg://postgres:postgres@localhost:5432/property_manager
-  sync_url: postgresql://postgres:postgres@localhost:5432/property_manager
+  url: postgresql+asyncpg://postgres:postgres@localhost:5433/property_manager
+  sync_url: postgresql://postgres:postgres@localhost:5433/property_manager
 
 redis:
   url: redis://localhost:6379/0

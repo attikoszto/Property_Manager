@@ -5,8 +5,8 @@ class Settings(BaseSettings):
     app_name: str = "AI Property Manager"
     debug: bool = False
 
-    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/property_manager"
-    database_sync_url: str = "postgresql://postgres:postgres@localhost:5432/property_manager"
+    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5433/property_manager"
+    database_sync_url: str = "postgresql://postgres:postgres@localhost:5433/property_manager"
 
     redis_url: str = "redis://localhost:6379/0"
 
