@@ -62,12 +62,20 @@ class ListingRepository:
             for attr in [
                 "title", "location", "lat", "lng", "capacity", "bedrooms",
                 "bathrooms", "square_meters", "rating", "review_count",
-                "amenities", "base_price", "owner_id", "is_customer",
+                "amenities", "base_price",
             ]:
                 setattr(existing, attr, getattr(listing, attr))
+            # Only update ownership fields if explicitly set
+            if listing.owner_id is not None:
+                existing.owner_id = listing.owner_id
+            if listing.is_customer is not None:
+                existing.is_customer = listing.is_customer
             await self.session.commit()
             await self.session.refresh(existing)
             return existing
+        # For new inserts ensure is_customer defaults
+        if listing.is_customer is None:
+            listing.is_customer = False
         return await self.create(listing)
 
 

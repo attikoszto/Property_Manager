@@ -85,8 +85,7 @@ class WeatherClient:
             "daily": (
                 "temperature_2m_max,temperature_2m_min,"
                 "precipitation_probability_max,snowfall_sum,"
-                "wind_speed_10m_max,sunshine_duration,"
-                "cloud_cover_mean,snow_depth"
+                "wind_speed_10m_max,sunshine_duration"
             ),
             "forecast_days": days,
         }
@@ -104,8 +103,6 @@ class WeatherClient:
         snowfall = daily.get("snowfall_sum", [])
         wind = daily.get("wind_speed_10m_max", [])
         sunshine = daily.get("sunshine_duration", [])
-        cloud = daily.get("cloud_cover_mean", [])
-        snow_depth = daily.get("snow_depth", [])
 
         results: list[ExtendedWeatherForecast] = []
         for i, d in enumerate(dates):
@@ -127,10 +124,10 @@ class WeatherClient:
                 snowfall_next_3_days=sf_3d,
                 snowfall_next_7_days=sf_7d,
                 sun_hours_forecast=sun_hrs,
-                cloud_cover_forecast=(cloud[i] / 100.0) if i < len(cloud) else 0.5,
+                cloud_cover_forecast=0.5,  # Not available in Open-Meteo daily
                 rain_probability=(rain[i] / 100.0) if i < len(rain) else 0.0,
                 wind_speed=wind[i] if i < len(wind) else 0.0,
-                snow_depth=snow_depth[i] if i < len(snow_depth) else 0.0,
+                snow_depth=0.0,  # Not available in forecast endpoint
                 fresh_snow=sf,
             ))
 

@@ -1,10 +1,15 @@
 """
 Scrape listings from Airbnb and Booking.com platforms.
 
-Runs as part of the 3x/day GitHub Actions pipeline.
+Runs as part of the daily data pipeline (1x/day recommended).
+Uses Playwright headless browser to bypass anti-bot protections.
+
+IMPORTANT: This scraper is for personal market-research purposes.
+Rate limits and delays are built in to behave like a normal user.
 """
 
 import asyncio
+import random
 
 from core.constants import BERCHTESGADEN_LAT, BERCHTESGADEN_LNG, DEFAULT_RADIUS_KM
 from core.logging import logger
@@ -29,7 +34,13 @@ async def scrape_listings() -> None:
         repo = ListingRepository(session)
         total = 0
 
-        for scraper in scrapers:
+        for i, scraper in enumerate(scrapers):
+            # Random delay between platforms to avoid correlated requests
+            if i > 0:
+                delay = random.uniform(10, 25)
+                logger.info("Waiting %.0fs before next platform…", delay)
+                await asyncio.sleep(delay)
+
             try:
                 scraped = await scraper.scrape_listings()
                 for item in scraped:
