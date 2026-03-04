@@ -30,6 +30,9 @@ class CleaningService:
 
         return None
 
+    async def confirm_task(self, task_id: int) -> None:
+        await self.task_repo.update_status(task_id, "confirmed")
+
     async def complete_task(self, task_id: int) -> None:
         await self.task_repo.update_status(task_id, "completed")
 

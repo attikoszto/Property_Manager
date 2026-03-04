@@ -10,6 +10,7 @@ from infrastructure.database.repository import (
     CleanerRepository,
     CleaningTaskRepository,
     BookingRepository,
+    AvailabilityRepository,
 )
 from services.pricing_service import PricingService
 from services.demand_service import DemandService
@@ -46,6 +47,10 @@ async def get_booking_repo(session: AsyncSession = Depends(get_session)) -> Book
     return BookingRepository(session)
 
 
+async def get_availability_repo(session: AsyncSession = Depends(get_session)) -> AvailabilityRepository:
+    return AvailabilityRepository(session)
+
+
 async def get_pricing_service(
     listing_repo: ListingRepository = Depends(get_listing_repo),
     competitor_repo: CompetitorPriceRepository = Depends(get_competitor_repo),
@@ -57,8 +62,9 @@ async def get_demand_service(
     event_repo: EventRepository = Depends(get_event_repo),
     weather_repo: WeatherRepository = Depends(get_weather_repo),
     competitor_repo: CompetitorPriceRepository = Depends(get_competitor_repo),
+    availability_repo: AvailabilityRepository = Depends(get_availability_repo),
 ) -> DemandService:
-    return DemandService(event_repo, weather_repo, competitor_repo)
+    return DemandService(event_repo, weather_repo, competitor_repo, availability_repo)
 
 
 async def get_similarity_service(

@@ -13,6 +13,7 @@ from infrastructure.database.models import (
     CleanerModel,
     PropertyCleanerModel,
     CleaningTaskModel,
+    AvailabilitySnapshotModel,
 )
 
 
@@ -26,8 +27,17 @@ class ListingRepository:
         )
         return result.scalar_one()
 
-    async def get_all(self) -> Sequence[ListingModel]:
-        result = await self.session.execute(select(ListingModel))
+    async def get_all(
+        self,
+        exclude_customers: bool = False,
+        exclude_owner_id: str | None = None,
+    ) -> Sequence[ListingModel]:
+        query = select(ListingModel)
+        if exclude_customers:
+            query = query.where(ListingModel.is_customer.is_(False))
+        if exclude_owner_id:
+            query = query.where(ListingModel.owner_id != exclude_owner_id)
+        result = await self.session.execute(query)
         return result.scalars().all()
 
     async def get_by_external_id(self, external_id: str) -> ListingModel | None:
@@ -48,7 +58,7 @@ class ListingRepository:
             for attr in [
                 "title", "location", "lat", "lng", "capacity", "bedrooms",
                 "bathrooms", "square_meters", "rating", "review_count",
-                "amenities", "base_price",
+                "amenities", "base_price", "owner_id", "is_customer",
             ]:
                 setattr(existing, attr, getattr(listing, attr))
             await self.session.commit()
@@ -70,6 +80,19 @@ class CompetitorPriceRepository:
             .limit(len(listing_ids))
         )
         return [row[0] for row in result.all()]
+
+    async def get_latest_prices_with_listing(
+        self, listing_ids: list[int]
+    ) -> list[tuple[int, float]]:
+        """Return (listing_id, price) pairs for weighted competitor analysis."""
+        result = await self.session.execute(
+            select(CompetitorPriceModel.listing_id, CompetitorPriceModel.price)
+            .where(CompetitorPriceModel.listing_id.in_(listing_ids))
+            .where(CompetitorPriceModel.is_available.is_(True))
+            .order_by(CompetitorPriceModel.scraped_at.desc())
+            .limit(len(listing_ids))
+        )
+        return [(row[0], row[1]) for row in result.all()]
 
     async def get_availability_count(self, listing_ids: list[int], target_date: date) -> int:
         result = await self.session.execute(
@@ -224,3 +247,55 @@ class CleaningTaskRepository:
         task = await self.get_by_id(task_id)
         task.status = status
         await self.session.commit()
+
+
+class AvailabilityRepository:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def record_snapshot(
+        self, listing_id: int, snapshot_date: date, is_available: bool
+    ) -> AvailabilitySnapshotModel:
+        snapshot = AvailabilitySnapshotModel(
+            listing_id=listing_id, date=snapshot_date, is_available=is_available
+        )
+        self.session.add(snapshot)
+        await self.session.commit()
+        await self.session.refresh(snapshot)
+        return snapshot
+
+    async def detect_bookings(self, snapshot_date: date) -> list[int]:
+        yesterday = date.fromordinal(snapshot_date.toordinal() - 1)
+        prev = await self.session.execute(
+            select(AvailabilitySnapshotModel.listing_id)
+            .where(AvailabilitySnapshotModel.date == yesterday)
+            .where(AvailabilitySnapshotModel.is_available.is_(True))
+        )
+        was_available = {row[0] for row in prev.all()}
+
+        curr = await self.session.execute(
+            select(AvailabilitySnapshotModel.listing_id)
+            .where(AvailabilitySnapshotModel.date == snapshot_date)
+            .where(AvailabilitySnapshotModel.is_available.is_(False))
+        )
+        now_unavailable = {row[0] for row in curr.all()}
+
+        return list(was_available & now_unavailable)
+
+    async def compute_market_occupancy(self, snapshot_date: date) -> float:
+        total = await self.session.execute(
+            select(func.count())
+            .select_from(AvailabilitySnapshotModel)
+            .where(AvailabilitySnapshotModel.date == snapshot_date)
+        )
+        total_count = total.scalar() or 0
+
+        blocked = await self.session.execute(
+            select(func.count())
+            .select_from(AvailabilitySnapshotModel)
+            .where(AvailabilitySnapshotModel.date == snapshot_date)
+            .where(AvailabilitySnapshotModel.is_available.is_(False))
+        )
+        blocked_count = blocked.scalar() or 0
+
+        return blocked_count / total_count if total_count > 0 else 0.0

@@ -12,7 +12,6 @@ AMENITY_FEATURES = [
     "balcony",
     "kitchen",
     "washer",
-    "ski_storage",
 ]
 
 SEASONALITY_FACTORS = {
@@ -44,6 +43,19 @@ SIMILARITY_TOP_K = 20
 
 PRICE_MULTIPLIER_OPTIONS = [0.9, 1.0, 1.1, 1.2]
 
-CLEANING_TASK_STATUSES = ["pending", "assigned", "in_progress", "completed"]
+# Weighted competitor set: external listings dominate the signal
+EXTERNAL_LISTING_WEIGHT = 1.0
+SYSTEM_LISTING_WEIGHT = 0.3
+
+CLEANING_TASK_STATUSES = ["pending", "assigned", "confirmed", "in_progress", "completed"]
 
 NOTIFICATION_CHANNELS = ["sms", "email", "push", "whatsapp"]
+
+DAYS_TO_CHECKIN_ADJUSTMENTS = {
+    60: 1.15,
+    30: 1.05,
+    14: 1.0,
+    7: 0.95,
+    3: 0.90,
+    1: 0.85,
+}

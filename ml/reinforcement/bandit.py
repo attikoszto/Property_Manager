@@ -5,6 +5,13 @@ from core.constants import PRICE_MULTIPLIER_OPTIONS
 
 
 class MultiArmedBandit:
+    """Epsilon-greedy multi-armed bandit for price multiplier selection.
+
+    Training signals come exclusively from internal booking data
+    (conversions, revenue, time-to-booking). External competitor
+    pricing must not be used as a reward signal.
+    """
+
     def __init__(self, arms: list[float] | None = None, epsilon: float = 0.1):
         self.arms = arms or PRICE_MULTIPLIER_OPTIONS
         self.epsilon = epsilon

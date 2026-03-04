@@ -32,8 +32,10 @@ SAMPLE_LISTINGS = [
         "square_meters": 65.0,
         "rating": 4.8,
         "review_count": 124,
-        "amenities": ["wifi", "parking", "kitchen", "balcony", "ski_storage"],
+        "amenities": ["wifi", "parking", "kitchen", "balcony"],
         "base_price": 120.0,
+        "owner_id": "owner_001",
+        "is_customer": True,
     },
     {
         "external_id": "airbnb_002",
@@ -50,6 +52,8 @@ SAMPLE_LISTINGS = [
         "review_count": 67,
         "amenities": ["wifi", "kitchen", "washer"],
         "base_price": 85.0,
+        "owner_id": "owner_002",
+        "is_customer": False,
     },
     {
         "external_id": "booking_001",
@@ -64,8 +68,10 @@ SAMPLE_LISTINGS = [
         "square_meters": 140.0,
         "rating": 4.9,
         "review_count": 203,
-        "amenities": ["wifi", "parking", "sauna", "balcony", "kitchen", "washer", "ski_storage"],
+        "amenities": ["wifi", "parking", "sauna", "balcony", "kitchen", "washer"],
         "base_price": 280.0,
+        "owner_id": "owner_003",
+        "is_customer": False,
     },
     {
         "external_id": "airbnb_003",
@@ -82,6 +88,8 @@ SAMPLE_LISTINGS = [
         "review_count": 41,
         "amenities": ["wifi", "kitchen"],
         "base_price": 65.0,
+        "owner_id": "owner_004",
+        "is_customer": False,
     },
     {
         "external_id": "booking_002",
@@ -98,6 +106,8 @@ SAMPLE_LISTINGS = [
         "review_count": 89,
         "amenities": ["wifi", "parking", "kitchen", "washer", "balcony"],
         "base_price": 195.0,
+        "owner_id": "owner_001",
+        "is_customer": True,
     },
 ]
 

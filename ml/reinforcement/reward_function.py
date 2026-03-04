@@ -1,4 +1,17 @@
 class RewardFunction:
+    """Compute rewards for reinforcement learning price optimization.
+
+    IMPORTANT: Reward signals must rely ONLY on internal booking data:
+    - Own listing prices
+    - Own booking conversions
+    - Time-to-booking
+    - Own occupancy rates
+
+    External competitor data must NOT influence RL rewards.
+    Competitor data is used only in the pricing service's competition
+    adjustment, which is separate from RL training.
+    """
+
     @staticmethod
     def booking_reward(price: float, occupancy_probability: float) -> float:
         return price * occupancy_probability

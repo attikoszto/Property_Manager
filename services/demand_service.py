@@ -5,6 +5,7 @@ from infrastructure.database.repository import (
     EventRepository,
     WeatherRepository,
     CompetitorPriceRepository,
+    AvailabilityRepository,
 )
 
 
@@ -14,10 +15,12 @@ class DemandService:
         event_repo: EventRepository,
         weather_repo: WeatherRepository,
         competitor_repo: CompetitorPriceRepository,
+        availability_repo: AvailabilityRepository | None = None,
     ):
         self.event_repo = event_repo
         self.weather_repo = weather_repo
         self.competitor_repo = competitor_repo
+        self.availability_repo = availability_repo
 
     def get_season_factor(self, target_date: date) -> float:
         return SEASONALITY_FACTORS.get(target_date.month, 1.0)
@@ -49,6 +52,16 @@ class DemandService:
         total = len(listing_ids)
         occupancy_rate = 1.0 - (available / total) if total > 0 else 0.5
         return 0.8 + occupancy_rate * 0.4
+
+    async def get_market_occupancy(self, target_date: date) -> float:
+        if not self.availability_repo:
+            return 0.5
+        return await self.availability_repo.compute_market_occupancy(target_date)
+
+    async def detect_likely_bookings(self, target_date: date) -> list[int]:
+        if not self.availability_repo:
+            return []
+        return await self.availability_repo.detect_bookings(target_date)
 
     async def compute_demand_index(
         self,

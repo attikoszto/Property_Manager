@@ -35,6 +35,7 @@ class ListingModel(Base):
     amenities = Column(JSON, nullable=True)
     base_price = Column(Float, nullable=False)
     owner_id = Column(String(255), nullable=True)
+    is_customer = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -101,6 +102,16 @@ class PropertyCleanerModel(Base):
     property_id = Column(Integer, ForeignKey("listings.id"), nullable=False)
     cleaner_id = Column(Integer, ForeignKey("cleaners.id"), nullable=False)
     priority = Column(Integer, default=1)
+
+
+class AvailabilitySnapshotModel(Base):
+    __tablename__ = "availability_snapshots"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    listing_id = Column(Integer, ForeignKey("listings.id"), nullable=False, index=True)
+    date = Column(Date, nullable=False)
+    is_available = Column(Boolean, nullable=False)
+    scraped_at = Column(DateTime, default=datetime.utcnow)
 
 
 class CleaningTaskModel(Base):

@@ -24,6 +24,7 @@ class ListingCreate(BaseModel):
     amenities: list[str] = []
     base_price: float
     owner_id: str | None = None
+    is_customer: bool = False
 
 
 class ListingResponse(BaseModel):
@@ -43,6 +44,7 @@ class ListingResponse(BaseModel):
     amenities: list[str] | None
     base_price: float
     owner_id: str | None
+    is_customer: bool
 
     class Config:
         from_attributes = True

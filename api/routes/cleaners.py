@@ -55,3 +55,12 @@ async def complete_cleaning_task(
 ):
     await service.complete_task(task_id)
     return {"status": "completed"}
+
+
+@router.post("/tasks/{task_id}/confirm")
+async def confirm_cleaning_task(
+    task_id: int,
+    service: CleaningService = Depends(get_cleaning_service),
+):
+    await service.confirm_task(task_id)
+    return {"status": "confirmed"}
