@@ -59,3 +59,23 @@ DAYS_TO_CHECKIN_ADJUSTMENTS = {
     3: 0.90,
     1: 0.85,
 }
+
+# Weather-based demand signal thresholds
+SNOWFALL_48H_THRESHOLD = 5.0      # cm for sun-after-snow trigger
+SUN_HOURS_THRESHOLD = 4.0         # hours for sun-after-snow trigger
+SKI_INDEX_HIGH_DEMAND = 7.0       # ski index above this → demand spike
+OUTDOOR_INDEX_HIGH_DEMAND = 7.0   # outdoor index above this → demand spike
+
+# Demand shock detection
+DEMAND_SHOCK_THRESHOLD = 0.15     # occupancy change > 15% = shock
+
+# Search demand queries for the region
+SEARCH_QUERIES = [
+    "berchtesgaden skiurlaub",
+    "berchtesgaden ferienwohnung",
+    "königssee urlaub",
+    "berchtesgaden wandern",
+]
+
+# Scraping schedule: 3 times per day (03:00, 11:00, 19:00 UTC)
+SCRAPE_CRON_SCHEDULES = ["0 3 * * *", "0 11 * * *", "0 19 * * *"]

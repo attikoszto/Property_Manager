@@ -11,12 +11,18 @@ from infrastructure.database.repository import (
     CleaningTaskRepository,
     BookingRepository,
     AvailabilityRepository,
+    WeatherForecastRepository,
+    SearchDemandRepository,
+    FlightPriceRepository,
+    MarketSnapshotRepository,
 )
 from services.pricing_service import PricingService
 from services.demand_service import DemandService
 from services.similarity_service import SimilarityService
 from services.cleaning_service import CleaningService
 from services.booking_service import BookingService
+from services.weather_feature_service import WeatherFeatureService
+from services.market_analysis_service import MarketAnalysisService
 
 
 async def get_listing_repo(session: AsyncSession = Depends(get_session)) -> ListingRepository:
@@ -49,6 +55,22 @@ async def get_booking_repo(session: AsyncSession = Depends(get_session)) -> Book
 
 async def get_availability_repo(session: AsyncSession = Depends(get_session)) -> AvailabilityRepository:
     return AvailabilityRepository(session)
+
+
+async def get_weather_forecast_repo(session: AsyncSession = Depends(get_session)) -> WeatherForecastRepository:
+    return WeatherForecastRepository(session)
+
+
+async def get_search_demand_repo(session: AsyncSession = Depends(get_session)) -> SearchDemandRepository:
+    return SearchDemandRepository(session)
+
+
+async def get_flight_price_repo(session: AsyncSession = Depends(get_session)) -> FlightPriceRepository:
+    return FlightPriceRepository(session)
+
+
+async def get_market_snapshot_repo(session: AsyncSession = Depends(get_session)) -> MarketSnapshotRepository:
+    return MarketSnapshotRepository(session)
 
 
 async def get_pricing_service(
@@ -84,3 +106,21 @@ async def get_booking_service(
     booking_repo: BookingRepository = Depends(get_booking_repo),
 ) -> BookingService:
     return BookingService(booking_repo)
+
+
+async def get_weather_feature_service(
+    forecast_repo: WeatherForecastRepository = Depends(get_weather_forecast_repo),
+) -> WeatherFeatureService:
+    return WeatherFeatureService(forecast_repo)
+
+
+async def get_market_analysis_service(
+    market_repo: MarketSnapshotRepository = Depends(get_market_snapshot_repo),
+    availability_repo: AvailabilityRepository = Depends(get_availability_repo),
+    competitor_repo: CompetitorPriceRepository = Depends(get_competitor_repo),
+    search_repo: SearchDemandRepository = Depends(get_search_demand_repo),
+    flight_repo: FlightPriceRepository = Depends(get_flight_price_repo),
+) -> MarketAnalysisService:
+    return MarketAnalysisService(
+        market_repo, availability_repo, competitor_repo, search_repo, flight_repo
+    )

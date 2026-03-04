@@ -122,3 +122,65 @@ class CleaningTaskModel(Base):
     check_out_date = Column(Date, nullable=False)
     assigned_cleaner_id = Column(Integer, ForeignKey("cleaners.id"), nullable=True)
     status = Column(String(50), default="pending")
+
+
+class WeatherForecastModel(Base):
+    """Extended weather forecast features per stay date."""
+    __tablename__ = "weather_forecasts"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    stay_date = Column(Date, nullable=False, index=True)
+    location = Column(String(255), nullable=False)
+    temperature_forecast = Column(Float, nullable=False)
+    temperature_trend = Column(Float, nullable=False, default=0.0)
+    snowfall_next_3_days = Column(Float, nullable=False, default=0.0)
+    snowfall_next_7_days = Column(Float, nullable=False, default=0.0)
+    sun_hours_forecast = Column(Float, nullable=False, default=0.0)
+    cloud_cover_forecast = Column(Float, nullable=False, default=0.0)
+    rain_probability = Column(Float, nullable=False, default=0.0)
+    wind_speed = Column(Float, nullable=False, default=0.0)
+    snow_depth = Column(Float, nullable=False, default=0.0)
+    fresh_snow = Column(Float, nullable=False, default=0.0)
+    fetched_at = Column(DateTime, default=datetime.utcnow)
+
+
+class SearchDemandModel(Base):
+    """Google Trends / search interest signals."""
+    __tablename__ = "search_demand"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    query_term = Column(String(500), nullable=False)
+    location = Column(String(255), nullable=False)
+    date = Column(Date, nullable=False, index=True)
+    search_interest_index = Column(Float, nullable=False)
+    search_interest_trend = Column(Float, nullable=False, default=0.0)
+    fetched_at = Column(DateTime, default=datetime.utcnow)
+
+
+class FlightPriceModel(Base):
+    """Flight price signals for international tourism demand."""
+    __tablename__ = "flight_prices"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    origin = Column(String(10), nullable=False)
+    destination = Column(String(10), nullable=False)
+    travel_date = Column(Date, nullable=False, index=True)
+    average_price = Column(Float, nullable=False)
+    price_trend = Column(Float, nullable=False, default=0.0)
+    availability_score = Column(Float, nullable=False, default=1.0)
+    fetched_at = Column(DateTime, default=datetime.utcnow)
+
+
+class MarketSnapshotModel(Base):
+    """Daily market-level aggregation for saturation and momentum signals."""
+    __tablename__ = "market_snapshots"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    date = Column(Date, nullable=False, index=True)
+    location = Column(String(255), nullable=False)
+    total_listings = Column(Integer, nullable=False)
+    available_listings = Column(Integer, nullable=False)
+    median_price = Column(Float, nullable=False)
+    avg_occupancy_rate = Column(Float, nullable=False)
+    booking_velocity = Column(Float, nullable=False, default=0.0)
+    created_at = Column(DateTime, default=datetime.utcnow)

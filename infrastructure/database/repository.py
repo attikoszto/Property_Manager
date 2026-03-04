@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from typing import Sequence
 
 from sqlalchemy import select, func
@@ -14,6 +14,10 @@ from infrastructure.database.models import (
     PropertyCleanerModel,
     CleaningTaskModel,
     AvailabilitySnapshotModel,
+    WeatherForecastModel,
+    SearchDemandModel,
+    FlightPriceModel,
+    MarketSnapshotModel,
 )
 
 
@@ -299,3 +303,134 @@ class AvailabilityRepository:
         blocked_count = blocked.scalar() or 0
 
         return blocked_count / total_count if total_count > 0 else 0.0
+
+
+class WeatherForecastRepository:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def get_forecast(self, stay_date: date, location: str) -> WeatherForecastModel | None:
+        result = await self.session.execute(
+            select(WeatherForecastModel)
+            .where(WeatherForecastModel.stay_date == stay_date)
+            .where(WeatherForecastModel.location == location)
+            .order_by(WeatherForecastModel.fetched_at.desc())
+        )
+        return result.scalar_one_or_none()
+
+    async def get_range(
+        self, start_date: date, end_date: date, location: str
+    ) -> Sequence[WeatherForecastModel]:
+        result = await self.session.execute(
+            select(WeatherForecastModel)
+            .where(WeatherForecastModel.stay_date >= start_date)
+            .where(WeatherForecastModel.stay_date <= end_date)
+            .where(WeatherForecastModel.location == location)
+            .order_by(WeatherForecastModel.stay_date)
+        )
+        return result.scalars().all()
+
+    async def upsert(self, forecast: WeatherForecastModel) -> WeatherForecastModel:
+        existing = await self.get_forecast(forecast.stay_date, forecast.location)
+        if existing:
+            for attr in [
+                "temperature_forecast", "temperature_trend",
+                "snowfall_next_3_days", "snowfall_next_7_days",
+                "sun_hours_forecast", "cloud_cover_forecast",
+                "rain_probability", "wind_speed", "snow_depth", "fresh_snow",
+            ]:
+                setattr(existing, attr, getattr(forecast, attr))
+            await self.session.commit()
+            await self.session.refresh(existing)
+            return existing
+        self.session.add(forecast)
+        await self.session.commit()
+        await self.session.refresh(forecast)
+        return forecast
+
+
+class SearchDemandRepository:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def get_latest(self, query_term: str, location: str) -> SearchDemandModel | None:
+        result = await self.session.execute(
+            select(SearchDemandModel)
+            .where(SearchDemandModel.query_term == query_term)
+            .where(SearchDemandModel.location == location)
+            .order_by(SearchDemandModel.date.desc())
+        )
+        return result.scalars().first()
+
+    async def get_trend(
+        self, query_term: str, location: str, days: int = 30
+    ) -> Sequence[SearchDemandModel]:
+        cutoff = date.today() - timedelta(days=days)
+        result = await self.session.execute(
+            select(SearchDemandModel)
+            .where(SearchDemandModel.query_term == query_term)
+            .where(SearchDemandModel.location == location)
+            .where(SearchDemandModel.date >= cutoff)
+            .order_by(SearchDemandModel.date)
+        )
+        return result.scalars().all()
+
+    async def create(self, record: SearchDemandModel) -> SearchDemandModel:
+        self.session.add(record)
+        await self.session.commit()
+        await self.session.refresh(record)
+        return record
+
+
+class FlightPriceRepository:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def get_latest(
+        self, origin: str, destination: str, travel_date: date
+    ) -> FlightPriceModel | None:
+        result = await self.session.execute(
+            select(FlightPriceModel)
+            .where(FlightPriceModel.origin == origin)
+            .where(FlightPriceModel.destination == destination)
+            .where(FlightPriceModel.travel_date == travel_date)
+            .order_by(FlightPriceModel.fetched_at.desc())
+        )
+        return result.scalars().first()
+
+    async def create(self, record: FlightPriceModel) -> FlightPriceModel:
+        self.session.add(record)
+        await self.session.commit()
+        await self.session.refresh(record)
+        return record
+
+
+class MarketSnapshotRepository:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def get_latest(self, location: str) -> MarketSnapshotModel | None:
+        result = await self.session.execute(
+            select(MarketSnapshotModel)
+            .where(MarketSnapshotModel.location == location)
+            .order_by(MarketSnapshotModel.date.desc())
+        )
+        return result.scalars().first()
+
+    async def get_trend(
+        self, location: str, days: int = 7
+    ) -> Sequence[MarketSnapshotModel]:
+        cutoff = date.today() - timedelta(days=days)
+        result = await self.session.execute(
+            select(MarketSnapshotModel)
+            .where(MarketSnapshotModel.location == location)
+            .where(MarketSnapshotModel.date >= cutoff)
+            .order_by(MarketSnapshotModel.date)
+        )
+        return result.scalars().all()
+
+    async def create(self, snapshot: MarketSnapshotModel) -> MarketSnapshotModel:
+        self.session.add(snapshot)
+        await self.session.commit()
+        await self.session.refresh(snapshot)
+        return snapshot
